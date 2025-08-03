@@ -4,7 +4,7 @@ export MASTER_ADDR=${MASTER_ADDR}
 export MASTER_PORT=${MASTER_PORT}
 export WORLD_SIZE=${WORLD_SIZE}
 export RANK=${RANK}
-export MY_PORT=8469
+export MY_PORT=8464
 
 echo 'Acquire::http::Proxy "http://10.20.112.35:3143";' > /etc/apt/apt.conf.d/proxy
 sudo apt install iputils-ping -y
@@ -32,19 +32,19 @@ pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/antlr4-python3-runtime-4.7.2.tar.gz
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/latex2sympy2-1.9.1-py3-none-any.whl
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/antlr4-python3-runtime-4.9.3.tar.gz
-#Mol2caption or Caption2mol
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/selfies-2.2.0-py3-none-any.whl
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/rdkit-2025.3.3-cp310-cp310-manylinux_2_28_x86_64.whl
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/nltk-3.9.1-py3-none-any.whl
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/rapidfuzz-3.13.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/levenshtein-0.27.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/whl_files/rouge_score-0.1.2.tar.gz
 
 
 current_time=$(date +"%Y%m%d_%H%M%S")
-export RUN_NAME=verl-qwen2moe-math_${current_time}
-export PROJECT_NAME=verl-qwen2moe-math
-export OUTPUT_PATH=/mnt/public/gpfs-jd/model/RL_Model/$RUN_NAME
+#train_path=/mnt/public/gpfs-jd/code/guoweiyang/LRM/datasets/math-verl/train.parquet
+#test_path=/mnt/public/gpfs-jd/code/guoweiyang/LRM/datasets/math-verl/test.parquet
+train_path=/mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/datasets/dapo17k-verl/train.parquet
+test_path=/mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/datasets/eval_datasets/aime2024-32/aime-2024.parquet
+train_files="['$train_path']"
+test_files="['$test_path']"
+
+export RUN_NAME=verl-grpo-train-${current_time}
+export PROJECT_NAME=verl-grpo-train
+export OUTPUT_PATH=/mnt/public/gpfs-jd/code/guoweiyang/LRM/exp_out/$RUN_NAME
 export HDFS_LOG_PATH=$OUTPUT_PATH/log
 export HDFS_CHECKPOINT_PATH=$OUTPUT_PATH/model_output
 export TENSORBOARD_DIR=$OUTPUT_PATH/tensorboard_log
@@ -60,43 +60,18 @@ SCRIPT_NAME=$(basename "$0")
 DESTINATION_PATH="$OUTPUT_PATH/$SCRIPT_NAME"
 cp "$0" "$DESTINATION_PATH"
 
-train_path=/mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/datasets/dapo17k-verl/train.parquet
-test_path=/mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/datasets/eval_datasets/aime2024-32/aime-2024.parquet
-train_files="['$train_path']"
-test_files="['$test_path']"
-
-### Separated Clip Epsilons (-> Clip-Higher)
-clip_ratio_low=0.2
-clip_ratio_high=0.28
-
-### Dynamic Sampling (with Group Filtering)
-enable_filter_groups=True
-filter_groups_metric=acc
-max_num_gen_batches=10
-
-### Flexible Loss Aggregation Mode (-> Token-level Loss)
 loss_agg_mode="token-mean"
 
-### Overlong Reward Shaping
-enable_overlong_buffer=True
-overlong_buffer_len=$((1024 * 2))
-overlong_penalty_factor=1.0
-
-fsdp_size=-1
-# Algorithm
+micro_batch_size=8
 max_prompt_length=$((1024 * 2))
 max_response_length=$((1024 * 6))
-micro_batch_size=4
 actor_ppo_max_token_len=$(((max_prompt_length + max_response_length) * $micro_batch_size))
 infer_ppo_max_token_len=$(((max_prompt_length + max_response_length) * $micro_batch_size))
-
-HF_MODEL_PATH=/mnt/public/gpfs-jd/model/BASE_LLM/Experiments/mcore2hf/Qwen2.5-7B-1S-NumExpert8-TP1-PP2-EP4-SI18944-EI18944-TOP1-NSHARD0-NCSHARD1-SEI_copy-REI_copy-RI_normal-Data01_1-02_1-03_1-04_1-05_1-06_1-08_1-09_1-10_1-11_1-12_1-13_1-17_4-Train50B-WMUP0.5B-LR1e-5-MIN_LR1e-7_untie
-basename=$(basename "${HF_MODEL_PATH}")
-DIST_CKPT_PATH=/mnt/public/gpfs-jd/model/BASE_LLM/Experiments/verlmcore/$basename/dist_ckpt
+Model_PATH_or_NAME=/mnt/public/gpfs-jd/model/Qwen/Official/Qwen2_5/Qwen2.5-7B-Instruct
 
 
 if [ "$RANK" -eq 0 ]; then
-    python3 -m recipe.science_rl.main_dapo \
+    python -m verl.trainer.main_ppo \
         algorithm.adv_estimator=grpo \
         data.train_files="$train_files" \
         data.val_files="$test_files" \
@@ -105,13 +80,13 @@ if [ "$RANK" -eq 0 ]; then
         data.max_response_length=${max_response_length} \
         data.filter_overlong_prompts=True \
         data.truncation='error' \
-        actor_rollout_ref.model.path=$HF_MODEL_PATH \
+        actor_rollout_ref.model.path=$Model_PATH_or_NAME \
+        actor_rollout_ref.model.use_remove_padding=True \
         actor_rollout_ref.model.enable_gradient_checkpointing=True \
-        actor_rollout_ref.model.override_config.moe_config.freeze_moe_router=False \
         actor_rollout_ref.actor.optim.lr=1e-6 \
         actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
         actor_rollout_ref.actor.optim.weight_decay=0.1 \
-        actor_rollout_ref.actor.ppo_mini_batch_size=32 \
+        actor_rollout_ref.actor.ppo_mini_batch_size=128 \
         actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$micro_batch_size \
         actor_rollout_ref.actor.use_dynamic_bsz=True \
         actor_rollout_ref.actor.ppo_max_token_len_per_gpu=${actor_ppo_max_token_len} \
@@ -119,17 +94,11 @@ if [ "$RANK" -eq 0 ]; then
         actor_rollout_ref.actor.use_kl_loss=False \
         actor_rollout_ref.actor.kl_loss_coef=0.0 \
         actor_rollout_ref.actor.entropy_coeff=0 \
-        actor_rollout_ref.actor.clip_ratio_low=${clip_ratio_low} \
-        actor_rollout_ref.actor.clip_ratio_high=${clip_ratio_high} \
+        actor_rollout_ref.actor.clip_ratio_low=0.2 \
+        actor_rollout_ref.actor.clip_ratio_high=0.2 \
         actor_rollout_ref.actor.clip_ratio_c=10.0 \
-        actor_rollout_ref.actor.megatron.param_offload=False \
-        actor_rollout_ref.actor.megatron.optimizer_offload=False \
-        actor_rollout_ref.actor.megatron.grad_offload=False \
-        actor_rollout_ref.actor.megatron.pipeline_model_parallel_size=4 \
-        actor_rollout_ref.actor.megatron.tensor_model_parallel_size=4 \
-        actor_rollout_ref.actor.megatron.expert_model_parallel_size=4 \
-        actor_rollout_ref.actor.megatron.use_dist_checkpointing=True \
-        actor_rollout_ref.actor.megatron.dist_checkpointing_path=$DIST_CKPT_PATH \
+        actor_rollout_ref.actor.fsdp_config.param_offload=False \
+        actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
         actor_rollout_ref.rollout.temperature=1.0 \
         actor_rollout_ref.rollout.top_p=1.0 \
         actor_rollout_ref.rollout.top_k=-1 \
@@ -139,36 +108,25 @@ if [ "$RANK" -eq 0 ]; then
         actor_rollout_ref.rollout.enable_chunked_prefill=True \
         actor_rollout_ref.rollout.log_prob_use_dynamic_bsz=True \
         actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_len} \
-        actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$micro_batch_size \
         actor_rollout_ref.rollout.n=8 \
         algorithm.use_kl_in_reward=False \
         algorithm.kl_ctrl.kl_coef=0.0 \
-        ++algorithm.filter_groups.enable=${enable_filter_groups} \
-        ++algorithm.filter_groups.max_num_gen_batches=${max_num_gen_batches} \
-        ++algorithm.filter_groups.metric=${filter_groups_metric} \
+        actor_rollout_ref.ref.log_prob_use_dynamic_bsz=True \
+        actor_rollout_ref.ref.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_len} \
+        actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
         custom_reward_function.path=examples/reward_function/math_reward.py \
         custom_reward_function.name=compute_score_math \
-        actor_rollout_ref.ref.megatron.pipeline_model_parallel_size=4 \
-        actor_rollout_ref.ref.megatron.tensor_model_parallel_size=4 \
-        actor_rollout_ref.ref.megatron.expert_model_parallel_size=4 \
-        actor_rollout_ref.ref.megatron.use_dist_checkpointing=True \
-        actor_rollout_ref.ref.megatron.dist_checkpointing_path=$DIST_CKPT_PATH \
-        reward_model.reward_manager=dapo \
-        +reward_model.reward_kwargs.overlong_buffer_cfg.enable=${enable_overlong_buffer} \
-        +reward_model.reward_kwargs.overlong_buffer_cfg.len=${overlong_buffer_len} \
-        +reward_model.reward_kwargs.overlong_buffer_cfg.penalty_factor=${overlong_penalty_factor} \
-        +reward_model.reward_kwargs.overlong_buffer_cfg.log=False \
-        +reward_model.reward_kwargs.max_resp_len=${max_response_length} \
         actor_rollout_ref.actor.checkpoint.save_contents=['model'] \
         trainer.logger=['console','tensorboard'] \
         trainer.project_name=$PROJECT_NAME \
         trainer.experiment_name=$RUN_NAME \
         trainer.n_gpus_per_node=8 \
         trainer.nnodes=$WORLD_SIZE \
-        trainer.test_freq=20 \
-        trainer.save_freq=300 \
+        trainer.save_freq=100 \
+        trainer.test_freq=10 \
         trainer.default_local_dir=$HDFS_CHECKPOINT_PATH \
-        trainer.total_epochs=10
+        trainer.total_epochs=20
 fi
+
 
 

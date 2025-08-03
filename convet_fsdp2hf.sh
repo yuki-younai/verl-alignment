@@ -7,7 +7,7 @@ pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/antlr4-python3-runtime-4.7.2.tar.gz
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/latex2sympy2-1.9.1-py3-none-any.whl
 pip install --no-index /mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/whl_files/antlr4-python3-runtime-4.9.3.tar.gz
-MODEL_SVAE_PATH=/mnt/public/gpfs-jd/code/guoweiyang/Pai-Megatron-Upcycle-own/Reasoning/exp_output/verl-dapo_20250711_091844/model_output/global_step_610/actor
+MODEL_SVAE_PATH=/mnt/public/gpfs-jd/code/guoweiyang/LRM/exp_out/verl-grpo-train-20250722_144845/model_output/global_step_330/actor
 HF_SAVE_PATH="${MODEL_SVAE_PATH%/*}"
 
 python -m verl.model_merger merge \
